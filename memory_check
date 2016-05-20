@@ -4,16 +4,13 @@
 
 while getopts ":c:w:e:" OPTIONS; do
 	case $OPTIONS in
-		c)
-			CRITICAL=$OPTARG ;;
-		w)
-			WARNING=$OPTARG ;;
-		e)
-			EMAIL=$OPTARG ;;
+		c) CRITICAL=$OPTARG ;;
+		w) WARNING=$OPTARG ;;
+		e) EMAIL=$OPTARG ;;
 	esac
 done
 
-if [ -z "$CRITICAL" ] || [[ "$CRITICAL" =~ ^[0-9]+$ ]] || [ -z "$WARNING" ] || [[ "$WARNING" =~ ^[0-9]+$ ]] || [ -z "$EMAIL" ] || [[ "$EMAIL" =~ .*@.* ]] || (($CRITICAL <= $WARNING)) || (($CRITICAL >= 100)) || (($WARNING == 0)); then
+if [ -z "$CRITICAL" ] || [[ "$CRITICAL" =~ ^[0-9]+$ ]] || [ -z "$WARNING" ] || [[ "$WARNING" =~ ^[0-9]+$ ]] || [ -z "$EMAIL" ] || [[ "$EMAIL" =~ .*@.* ]] || [ "$CRITICAL" -le "$WARNING" ] || [ "$CRITICAL" -gt 100 ] || [ "$WARNING" -eq 0 ]; then
 	printf "ERROR: memory_check [-c <percentage>] [-w <percentage>] [-e <email>]
 	Parameters are non-positional.
 		-c <percentage>		Critical threshold.
@@ -32,9 +29,9 @@ else
 	CHECK_WARNING=$(($WARNING*$TOTAL_MEMORY/100))
 
 	# checking
-	if (($CRITICAL <= $USED_MEMORY)); then
+	if [ "$CRITICAL" -le "$USED_MEMORY" ]; then
 		exit 2
-	elif (($WARNING <= $USED_MEMORY)); then
+	elif [ "$WARNING" -le "$USED_MEMORY" ]; then
 		exit 1
 	else
 		exit 0
