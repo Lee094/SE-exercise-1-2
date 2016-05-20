@@ -10,26 +10,28 @@ while getopts ":c:w:e:" OPTIONS; do
 	esac
 done
 
-if [ -z "$CRITICAL" ] || [[ "$CRITICAL" =~ ^[0-9]+$ ]] || [ -z "$WARNING" ] || [[ "$WARNING" =~ ^[0-9]+$ ]] || [ -z "$EMAIL" ] || [[ "$EMAIL" =~ ^[A-Za-z0-9].*@[A-Za-z0-9].* ]] || [ "$CRITICAL" -le "$WARNING" ] || [ "$CRITICAL" -gt 100 ] || [ "$WARNING" -eq 0 ]; then
+if [ -z "$CRITICAL" ] || [[ "$CRITICAL" =~ ^[0-9]+$ ]] || [ -z "$WARNING" ] || [[ "$WARNING" =~ ^[0-9]+$ ]] || [ -z "$EMAIL" ] || [[ "$EMAIL" =~ ^[A-Za-z].*@[A-Za-z0-9].* ]] || [ "$CRITICAL" -le "$WARNING" ] || [ "$CRITICAL" -gt 100 ] || [ "$WARNING" -eq 0 ]; then
 	printf "ERROR: memory_check [-c <percentage>] [-w <percentage>] [-e <email>]
-	Parameters are non-positional.
-		-c <percentage>		Critical threshold.
-					Must be greater than warning threshold.
-					Value must not exceed 100.
-		-w <percentage>		Warning threshold.
-					Value must be at least greater than 0.
-		-e <email>		Email address to send the report.\n"
-	exit 1
+Parameters are required and non-positional.
+	-c <percentage>		Critical threshold.
+				Must be greater than warning threshold.
+				Value must not exceed 100.
+	-w <percentage>		Warning threshold.
+				Value must be at least greater than 0.
+	-e <email>		Email address to send the report.\n"
+	exit 3		# exit code for invalid input
 else
-	TOTAL_MEMORY=${ free | grep Mem: | awk '{ print $2 }' }
-	USED_MEMORY=${ free | grep Mem: | awk '{ print $3 }' }
+	TOTAL_MEMORY=$( free | grep Mem: | awk '{ print $2 }' )
+	USED_MEMORY=$( free | grep Mem: | awk '{ print $3 }' )
+	CURRENT_TIME=$( date +%Y%m%d\ %H:%M )
 
-	# computation
-	CHECK_CRITICAL=$(($CRITICAL*$TOTAL_MEMORY/100))
-	CHECK_WARNING=$(($WARNING*$TOTAL_MEMORY/100))
+	CHECK_CRITICAL=$(($CRITICAL*$TOTAL_MEMORY/100))		# critical threshold
+	CHECK_WARNING=$(($WARNING*$TOTAL_MEMORY/100))		# warning threshold
 
 	# checking
 	if [ "$CRITICAL" -le "$USED_MEMORY" ]; then
+		echo $CURRENT_TIME
+		ps axo pid,comm,rss,%mem --sort -rss | head -n 11	# shows top 10 process using a lot of memory
 		exit 2
 	elif [ "$WARNING" -le "$USED_MEMORY" ]; then
 		exit 1
