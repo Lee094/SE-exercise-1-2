@@ -1,0 +1,42 @@
+#!bin/bash
+
+# memory with 3 parameters
+
+while getopts ":c:w:e:" OPTIONS; do
+	case $OPTIONS in
+		c)
+			CRITICAL=$OPTARG ;;
+		w)
+			WARNING=$OPTARG ;;
+		e)
+			EMAIL=$OPTARG ;;
+	esac
+done
+
+if [ -z "$CRITICAL" ] || [[ "$CRITICAL" =~ ^[0-9]+$ ]] || [ -z "$WARNING" ] || [[ "$WARNING" =~ ^[0-9]+$ ]] || [ -z "$EMAIL" ] || [[ "$EMAIL" =~ .*@.* ]] || (($CRITICAL <= $WARNING)) || (($CRITICAL >= 100)) || (($WARNING == 0)); then
+	printf "ERROR: memory_check [-c <percentage>] [-w <percentage>] [-e <email>]
+	Parameters are non-positional.
+		-c <percentage>		Critical threshold.
+					Must be greater than warning threshold.
+					Value must not exceed 100.
+		-w <percentage>		Warning threshold.
+					Value must be at least greater than 0.
+		-e <email>		Email address to send the report.\n"
+	exit 1
+else
+	TOTAL_MEMORY=${ free | grep Mem: | awk '{ print $2 }' }
+	USED_MEMORY=${ free | grep Mem: | awk '{ print $3 }' }
+
+	# computation
+	CHECK_CRITICAL=$(($CRITICAL*$TOTAL_MEMORY/100))
+	CHECK_WARNING=$(($WARNING*$TOTAL_MEMORY/100))
+
+	# checking
+	if (($CRITICAL <= $USED_MEMORY)); then
+		exit 2
+	elif (($WARNING <= $USED_MEMORY)); then
+		exit 1
+	else
+		exit 0
+	fi
+fi
