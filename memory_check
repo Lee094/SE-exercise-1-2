@@ -1,6 +1,6 @@
 #!bin/bash
 
-# memory with 3 parameters
+# memory checkup with 3 parameters
 
 while getopts ":c:w:e:" OPTIONS; do
 	case $OPTIONS in
@@ -10,7 +10,8 @@ while getopts ":c:w:e:" OPTIONS; do
 	esac
 done
 
-if [ -z "$CRITICAL" ] || [[ "$CRITICAL" =~ ^[0-9]+$ ]] || [ -z "$WARNING" ] || [[ "$WARNING" =~ ^[0-9]+$ ]] || [ -z "$EMAIL" ] || [[ "$EMAIL" =~ ^[A-Za-z].*@[A-Za-z0-9].* ]] || [ "$CRITICAL" -le "$WARNING" ] || [ "$CRITICAL" -gt 100 ] || [ "$WARNING" -eq 0 ]; then
+# check options if it exists, is valid and critical threshold greater than warning threshold
+if [ -z "$CRITICAL" ] || ! [[ "$CRITICAL" =~ ^[0-9]+$ ]] || [ -z "$WARNING" ] || ! [[ "$WARNING" =~ ^[0-9]+$ ]] || [ -z "$EMAIL" ] || ! [[ "$EMAIL" =~ ^[A-Za-z].*@[A-Za-z0-9].* ]] || [ "$CRITICAL" -le "$WARNING" ] || [ "$CRITICAL" -gt 100 ] || [ "$WARNING" -eq 0 ]; then
 	printf "ERROR: memory_check [-c <percentage>] [-w <percentage>] [-e <email>]
 Parameters are required and non-positional.
 	-c <percentage>		Critical threshold.
@@ -23,6 +24,7 @@ Parameters are required and non-positional.
 else
 	TOTAL_MEMORY=$( free | grep Mem: | awk '{ print $2 }' )
 	USED_MEMORY=$( free | grep Mem: | awk '{ print $3 }' )
+	TOP_PROCESS=$( ps axo pid,comm,rss,%mem --sort -rss | head -n 11 )	# top 10 processes using the most memory
 	CURRENT_TIME=$( date +%Y%m%d\ %H:%M )
 
 	CHECK_CRITICAL=$(($CRITICAL*$TOTAL_MEMORY/100))		# critical threshold
@@ -30,9 +32,9 @@ else
 
 	# checking
 	if [ "$CRITICAL" -le "$USED_MEMORY" ]; then
-		echo $CURRENT_TIME
-		ps axo pid,comm,rss,%mem --sort -rss | head -n 11	# shows top 10 process using a lot of memory
-		exit 2
+		echo $CURRENT_TIME "memory check - critical"
+		echo "$TOP_PROCESS"
+		exit 2		# exit code if 
 	elif [ "$WARNING" -le "$USED_MEMORY" ]; then
 		exit 1
 	else
